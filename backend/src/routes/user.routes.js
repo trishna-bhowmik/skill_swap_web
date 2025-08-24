@@ -4,8 +4,6 @@ import {
     accessChat,
     changeCurrentPassword, 
     getCurrentUser, 
-    getUserChannelProfile, 
-    getWatchHistory, 
     loginUser, 
     logoutUser, 
     refreshAccessToken, 
@@ -53,13 +51,6 @@ router.route("/update-skills").patch(verifyJWT, addSkills)
 
 router.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
 
-//router.route("/cover-image").patch(verifyJWT, upload.single("coverImage"), updateUserCover)
-
-router.route("/c/:username").get(verifyJWT, getUserChannelProfile)
-
-router.route("/history").get(verifyJWT, getWatchHistory)
-
-// routes/skill.route.js
 router.get("/skills",verifyJWT, getAllSkills);
 
 router.get("/skills/:skillId",verifyJWT, getUsersBySkill);
