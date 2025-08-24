@@ -46,19 +46,12 @@ const registerUser = asyncHandler( async (req, res) => {
     }
 
     const avatarLocalPath = req.files?.avatar[0]?.path;
-    //const coverImageLocalPath = req.files?.coverImage[0]?.path;
-    
-    // let coverImageLocalPath;
-    // if( req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
-    //     coverImageLocalPath = req.files.coverImage[0].path
-    // }
 
     if(!avatarLocalPath){
         throw new ApiEroor(400, "Avatar file is required")
     }
 
     const avatar = await uploadOnCloudinary(avatarLocalPath)
-    //const coverImage = await uploadOnCloudinary(coverImageLocalPath)
     
 
     if(!avatar) {
@@ -68,7 +61,6 @@ const registerUser = asyncHandler( async (req, res) => {
     const user = await User.create({
         fullname,
         avatar: avatar.url,
-        //coverImage: coverImage?.url || "",
         email,
         password,
         username: username.toLowerCase()
@@ -112,12 +104,11 @@ const loginUser = asyncHandler(async (req, res) => {
     .select("-password -refreshToken")
     .populate("skills", "name specialization description");
 
-  // ✅ Set the cookie
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // set true if using HTTPS
+    secure: process.env.NODE_ENV === "production", 
     sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000, 
   });
 
   return res.status(200).json(
@@ -333,153 +324,6 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
     .json(new ApiResponse(200, user, "Avatar Updated Successfully"))
 })
 
-// const updateUserCover = asyncHandler( async (req, res) => {
-//     const coverImageLocalPath = req.files?.path
-//     if(!coverImageLocalPath){
-//         throw new ApiEroor(400, "Cover Image file is missing")
-//     }
-
-//     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
-
-//     if(!coverImage.url){
-//         throw new ApiEroor(400, "Error while uploading Cover Image")
-//     }
-
-//     const user = await User.findByIdAndUpdate(
-//         req.user?._id,
-//         {
-//             $set: {
-//                 coverImage: coverImage.url
-//             }
-//         },
-//         {new: true}
-//     ).select("-password")
-
-//     return res
-//     .status(200)
-//     .json(new ApiResponse(200, user, "Cover Image Updated Successfully"))
-// })
-
-const getUserChannelProfile = asyncHandler( async(req, res) => {
-    const {username} = req.body
-    
-    if(!username?.trim){
-        throw new ApiEroor(400, "username is missing")
-    }
-
-    const cahnnel = await User.aggregate([
-        {
-            $match: {
-                username: username?.toLowerCase()
-            }
-        },
-        {
-            $lookup: {
-                from: "subscriptions",
-                localField: "_id",
-                foreignField: "channel",
-                as: "subscriber"
-            }
-        },
-        {
-            $lookup: {
-                from: "subscriptions",
-                localField: "_id",
-                foreignField: "subscriber",
-                as: "subscribedTo"
-            }
-        },
-        {
-            $addFields: {
-                subscribersCount: {
-                    $size: "$subscribers"
-                },
-                channelsubscribedToCount: {
-                    $size: "$subscribedTo"
-                },
-                isSubscribed: {
-                    $cond: {
-                        if: {$in : [req.user?._id, "$subscribers.subscriber"]},
-                        then: true,
-                        else: false
-                    }
-                }
-            }
-        },
-        {
-            $project: {
-                fullname: 1,
-                username: 1,
-                subscribersCount: 1,
-                channelsubscribedToCount: 1,
-                isSubscribed: 1,
-                avatar: 1,
-                coverImage: 1,
-                email: 1
-            }
-        }
-    ])
-
-    if(!cahnnel?.length) {
-        throw new ApiEroor(404, "Channel does not exists")
-    }
-
-    return res
-    .status(200)
-    .json(
-        new ApiResponse(200, cahnnel[0], "User channel fetched successfully")
-    )
-})
-
-const getWatchHistory = asyncHandler( async(req, res) => {
-    const user = await User.aggregate([
-        {
-            $match: {
-                _id: new mongoose.Types.ObjectId(req.user._id)
-            }
-        },
-        {
-            $lookup: {
-                from: "videos",
-                localField: "watchHistory",
-                foreignField: "_id",
-                as: "watchHistory",
-                pipeline: [
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "owner",
-                            foreignField: "_id",
-                            as: "owner",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        fullname: 1,
-                                        username: 1,
-                                        avatar: 1
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        $addFields: {
-                            owner: {
-                                $first: "$owner"
-                            }
-                        }
-                    }
-                ]
-            }
-        }
-    ])
-
-    return res
-    .status(200)
-    .json(
-        new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully")
-    )
-})
 
 const getAllSkills = asyncHandler(async (req, res) => {
   const skills = await Skill.find().populate("owners", "fullname email");
@@ -581,9 +425,6 @@ export {
     updateAccountDetails,
     addSkills,
     updateUserAvatar,
-    //updateUserCover,
-    getUserChannelProfile,
-    getWatchHistory,
     getAllSkills,
     getUsersBySkill,
     sendMessage,
